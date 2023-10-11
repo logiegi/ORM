@@ -1,5 +1,7 @@
 import sqlalchemy as sq
 import json
+
+from select import select
 from sqlalchemy.orm import sessionmaker
 
 from models import create_tables, Book, Stock, Shop, Sale, Publisher
@@ -29,17 +31,19 @@ for news in data:
     }[news['model']]
     session.add(method(id=news['pk'], **news.get('fields')))
 
-
 session.commit()
 
-publ_name = input('Ведите имя писателя или id для вывода: ')
-if publ_name.isnumeric():
-    for c in session.query(Publisher).filter(
-            Publisher.id == int(publ_name)).all():
-        print(c)
-else:
-    for c in session.query(Publisher).filter(
-            Publisher.name.like(f'%{publ_name}%')).all():
-        print(c)
+def get_shops(res):
+    answer = session.query(Book.title, Shop.name, Sale.price, Sale.date_sale,
+                           ).select_from(Shop).join(Stock).join(Book).join(Publisher).join(Sale)
+    if res.isdigit():
+        c = answer.filter(Publisher.id == int(res)).all()
+    else:
+        c = answer.filter(Publisher.id.like(f'%{res}%')).all()
+    for title, name, price, date_sale in c:
+        print(f"{title: <40} | {name: <10} | {price: <8} | {date_sale.strftime('%d-%m-%Y')}")
 
-session.close()
+
+if __name__ == '__main__':
+    search = input('Ведите имя писателя или id для вывода: ')
+    get_shops(search)
